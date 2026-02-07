@@ -21,8 +21,7 @@ if [[ ! -f "$SOURCE_FILE" ]]; then
     exit 1
 fi
 
-cp "$SOURCE_FILE" "$TARGET_DIR/$SCRIPT_NAME"
-chmod +x "$TARGET_DIR/$SCRIPT_NAME"
+ln -s "$SOURCE_FILE" "$TARGET_DIR/$SCRIPT_NAME"
 
 echo
 echo "Installed $SCRIPT_NAME → $TARGET_DIR/$SCRIPT_NAME"
