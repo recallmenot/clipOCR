@@ -4,7 +4,7 @@
 set -euo pipefail
 
 TARGET_DIR="$HOME/.local/bin"
-SCRIPT_NAME="clipOCR.sh"
+SCRIPT_NAME="clipOCR"
 
 if [[ ! -d "$TARGET_DIR" ]]; then
     echo "Creating directory: $TARGET_DIR"
