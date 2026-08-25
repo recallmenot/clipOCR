@@ -28,11 +28,12 @@ echo "Installed $SCRIPT_NAME → $TARGET_DIR/$SCRIPT_NAME"
 echo
 echo "You can now use it like:"
 echo "    clipOCR          # English (default)"
-echo "    clipOCR deu      # German"
-echo "    clipOCR jpn_vert # Japanese vertical"
+echo "    clipOCR -l deu      # German"
+echo "    clipOCR -l jpn_vert # Japanese vertical"
 echo
 echo "Make sure these are installed:"
-echo "  • tesseract-ocr"
-echo "  • tesseract-ocr-eng  (and other lang packs you want)"
+echo "  • tesseract"
+echo "  • tesseract-data-eng  (and other lang packs you want)"
+echo "  • tesseract-data-deu  (and other lang packs you want)"
 echo "  • xclip"
 echo
