@@ -1,18 +1,72 @@
 #!/usr/bin/env bash
 # clipOCR — OCR from clipboard image → text back to clipboard
+# Usage: clipOCR [-l|--lang LANGUAGE] [-h|--help]
+#        clipOCR                   # defaults to English
 
 set -euo pipefail
 
 # Default language
-LANG="${1:-eng}"
+LANG="eng"
+HELP=false
 
+# Simple argument parser
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -l|--lang)
+            if [[ -z "${2:-}" || "${2:0:1}" == "-" ]]; then
+                echo "Error: --lang requires a language code (e.g. eng, deu, fra)" >&2
+                exit 1
+            fi
+            LANG="$2"
+            shift 2
+            ;;
+        -h|--help)
+            HELP=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            echo "Try 'clipOCR --help' for usage." >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "$HELP" == true ]]; then
+    cat << 'EOF'
+clipOCR — OCR from clipboard image → text back to clipboard
+
+Usage:
+    clipOCR [-l|--lang LANG]    Perform OCR using the specified language
+    clipOCR                     Use default language (eng)
+    clipOCR -h | --help         Show this help message
+
+Options:
+    -l, --lang LANG    Tesseract language code (3-letter, e.g. eng, deu, fra, jpn, chi_sim)
+                       Multiple languages can be combined: eng+deu
+    -h, --help         Show this help message
+
+Examples:
+    clipOCR                     # English (default)
+    clipOCR -l deu              # German
+    clipOCR --lang jpn          # Japanese
+    clipOCR -l eng+chi_sim      # English + Simplified Chinese
+
+Requires: tesseract, xclip
+EOF
+    exit 0
+fi
+
+# Check dependencies
 if ! command -v tesseract >/dev/null 2>&1; then
     echo "Error: tesseract not found. Please install tesseract-ocr" >&2
+    echo "       On Debian/Ubuntu: sudo apt install tesseract-ocr" >&2
     exit 1
 fi
 
 if ! command -v xclip >/dev/null 2>&1; then
     echo "Error: xclip not found. Please install xclip" >&2
+    echo "       On Debian/Ubuntu: sudo apt install xclip" >&2
     exit 1
 fi
 
@@ -22,26 +76,31 @@ trap 'rm -rf "$TMPDIR"' EXIT
 PNGFILE="$TMPDIR/clipboard.png"
 TXTFILE="$TMPDIR/ocrresult"
 
-# Save clipboard image (works with PNG, JPG, etc. that X understands)
-xclip -selection clipboard -t image/png -o > "$PNGFILE" 2>/dev/null || {
-    echo "Error: No image found in clipboard (or xclip failed)" >&2
+# Try to get image from clipboard
+if ! xclip -selection clipboard -t image/png -o > "$PNGFILE" 2>/dev/null; then
+    echo "Error: No image found in clipboard" >&2
     exit 2
-}
+fi
 
-# Check it's actually an image
 if [[ ! -s "$PNGFILE" ]]; then
-    echo "Error: Clipboard content is empty or not an image" >&2
+    echo "Error: Clipboard content is empty or not a supported image" >&2
     exit 3
 fi
 
-# Run OCR — output directly to file without extension (tesseract adds .txt)
-tesseract "$PNGFILE" "$TXTFILE" -l "$LANG" --psm 6 quiet
+# Run OCR
+tesseract "$PNGFILE" "$TXTFILE" -l "$LANG" --psm 6 quiet 2>/dev/null || {
+    echo "Error: tesseract failed to process the image" >&2
+    exit 4
+}
 
-# Remove trailing empty lines, copy to clipboard
-cat "$TXTFILE.txt" | sed ':a;/^\n*$/{$d;N;ba}' | xclip -selection clipboard -i
+# Clean up output: remove trailing blank lines
+cleaned=$(sed ':a;/^\n*$/{$d;N;ba}' "$TXTFILE.txt")
 
-# Optional: also print to terminal
-cat "$TXTFILE.txt" | sed ':a;/^\n*$/{$d;N;ba}'
+# Copy to clipboard
+printf '%s' "$cleaned" | xclip -selection clipboard -i
+
+# Also print to terminal
+printf '%s\n' "$cleaned"
 
 echo
 echo "(language: $LANG)  →  text copied to clipboard"
